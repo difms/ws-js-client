@@ -12,7 +12,7 @@
         async function authenticateAndConnect(email, password) {
             try {
                 // 1. Отправляем запрос на /api/auth/login для получения токена
-                const response = await fetch('http://127.0.0.1:8000/api/auth/login2', {
+                const response = await fetch('http://127.0.0.1:8000/api/auth/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -48,18 +48,29 @@
 
                 // 4. Обрабатываем входящие сообщения
                 socket.onmessage = function(event) {
-                    console.log('Event:', event.data);
-                    try {
-                        const message = JSON.parse(event.data);
-                        console.log('Новое сообщение:', message);
-
-                        if (message.channel === 'public') {
-                            console.log('Публичное сообщение:', message.data);
-                        } else if (message.channel === 'private') {
-                            console.log('Приватное сообщение для пользователя:', message.data);
+                    let data = event.data;
+                    console.log("event:", event);
+                    console.log("event.data:", event.data);
+                    // Всегда проверяем, строка ли это, и парсим её
+                    if (typeof data === "string") {
+                        try {
+                            data = JSON.parse(data); // Попытка преобразовать строку JSON в объект
+                        } catch (error) {
+                            console.error("Ошибка при разборе JSON:", error);
+                            return;
                         }
-                    } catch (e) {
-                        console.error('Ошибка разбора JSON:', e);
+                    }
+
+                    // После парсинга `data` уже должен быть объектом
+                    console.log("Проверка типа данных после парсинга:", typeof data);
+                    console.log("Результат после парсинга:", data);
+                    console.log("Новое сообщение:", data);
+
+                    // Обработка данных в зависимости от канала
+                    if (data.channel === "private") {
+                        console.log("Приватное сообщение для пользователя:", data.data);
+                    } else if (data.channel === "public") {
+                        console.log("Публичное сообщение:", data.data);
                     }
                 };
 
