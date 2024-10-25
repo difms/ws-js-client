@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Client</title>
+</head>
+
+<body>
+    <script>
+        async function authenticateAndConnect(email, password) {
+            try {
+                // 1. Отправляем запрос на /api/auth/login для получения токена
+                const response = await fetch('http://127.0.0.1:8000/api/auth/login2', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password,
+                    }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Ошибка аутентификации: ' + response.statusText);
+                }
+
+                const data = await response.json();
+                const token = data.token; // Предполагается, что токен находится в поле "token"
+
+                console.log('Получен токен:', token);
+
+                // 2. Подключаемся к WebSocket с использованием Bearer токена
+                const socket = new WebSocket("ws://localhost:8080/ws?token=Bearer " + token);
+
+
+                // 3. Отправляем токен после успешного подключения
+                socket.onopen = function() {
+                    console.log('WebSocket соединение установлено');
+                    // Отправляем токен для аутентификации на WebSocket сервер
+                    socket.send(JSON.stringify({
+                        type: 'auth',
+                        token: `Bearer ${token}`,
+                    }));
+                };
+
+                // 4. Обрабатываем входящие сообщения
+                socket.onmessage = function(event) {
+                    console.log('Event:', event.data);
+                    try {
+                        const message = JSON.parse(event.data);
+                        console.log('Новое сообщение:', message);
+
+                        if (message.channel === 'public') {
+                            console.log('Публичное сообщение:', message.data);
+                        } else if (message.channel === 'private') {
+                            console.log('Приватное сообщение для пользователя:', message.data);
+                        }
+                    } catch (e) {
+                        console.error('Ошибка разбора JSON:', e);
+                    }
+                };
+
+                // 5. Обрабатываем ошибки соединения
+                socket.onerror = function(error) {
+                    console.error('WebSocket ошибка:', error);
+                };
+
+                // 6. Закрытие соединения
+                socket.onclose = function(event) {
+                    if (event.wasClean) {
+                        console.log('WebSocket соединение закрыто чисто');
+                    } else {
+                        console.error('Обрыв соединения'); // Например, "безбилетный" клиент
+                    }
+                    console.log('Код:', event.code, 'причина:', event.reason);
+                };
+
+            } catch (error) {
+                console.error('Ошибка:', error);
+            }
+        }
+
+        // Использование функции с почтой и паролем
+        authenticateAndConnect('dmitryfimush@gmail.com', 'Gia4rOq');
+    </script>
+</body>
+
+</html>
